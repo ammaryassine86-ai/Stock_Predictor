@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Which stocks are set to beat their market?</h1>
+  <p class="muted">
+    {% if ranking_date %}Ranking of {{ ranking_date }} · model <code>{{ tag }}</code> · next {{ 20 }} trading days{% else %}
+    No ranking yet: it appears after the nightly run (run_daily.bat).{% endif %}
+  </p>
+  {% if status.trained_up_to %}<p class="small muted">Model trained on data up to {{ status.trained_up_to }}{% if status.last_retrain %} · last monthly retrain {{ status.last_retrain }}: {{ status.last_result }}{% endif %}</p>{% endif %}
+</section>
+
+{% if tracked %}
+<section class="card">
+  <h2>Your tracked stocks</h2>
+  <table class="list">
+    {% for r in tracked %}
+    <tr onclick="location='{{ url_for('stock', ticker=r.ticker) }}'">
+      <td><b>{{ r.ticker }}</b> <span class="muted">{{ r.name }}</span></td>
+      <td class="muted">{{ r.country }}</td>
+      <td>{{ r.rank }}</td>
+      <td><span class="pill {{ r.verdict_class }}">{{ r.verdict }}</span></td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
+
+<section class="grid">
+  {% for m in markets %}
+  <div class="card market">
+    <div class="market-head"><h3>{{ m.country }}</h3><span class="muted">{{ m.stocks }} stocks · {{ m.date }}</span></div>
+    <a class="more" href="{{ url_for('ranking', country=m.country) }}">Full ranking →</a>
+    <div class="two">
+      <div>
+        <div class="label up-t">Most likely to beat</div>
+        {% for s in m.top %}<a class="row" href="{{ url_for('stock', ticker=s.ticker) }}"><b>{{ s.ticker }}</b><span>{{ s.name }}</span></a>{% endfor %}
+      </div>
+      <div>
+        <div class="label down-t">Most likely to lag</div>
+        {% for s in m.bottom %}<a class="row" href="{{ url_for('stock', ticker=s.ticker) }}"><b>{{ s.ticker }}</b><span>{{ s.name }}</span></a>{% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

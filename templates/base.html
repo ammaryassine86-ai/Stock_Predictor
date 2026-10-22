@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Stock Agent{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="{{ url_for('index') }}"><span class="dot"></span>Stock Agent</a>
+    <form class="search" action="{{ url_for('search_page') }}" method="get" autocomplete="off">
+      <input id="q" name="q" type="search" placeholder="Search a stock: apple, ASML, 0700.HK…" value="{{ q or '' }}">
+      <ul id="suggest" class="suggest" hidden></ul>
+    </form>
+    <a class="nav" href="{{ url_for('ranking') }}">Rankings</a>
+    <a class="nav nav2" href="{{ url_for('tracked') }}">Tracked{% if unread %}<span class="badge">{{ unread }}</span>{% endif %}</a>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+  <footer>A ranking research tool, not investment advice. Rankings compare each stock with its own market over the next 20 trading days.</footer>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

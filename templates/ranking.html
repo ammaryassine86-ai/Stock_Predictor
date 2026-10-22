@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ r.country }} ranking · Stock Agent{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>{{ r.country }} ranking</h1>
+  <p class="muted">{% if r.ranking_date %}All {{ r.total }} stocks ranked for the next 20 trading days, best first · data of {{ r.date }} · model <code>{{ r.tag }}</code>{% else %}No ranking yet.{% endif %}</p>
+</section>
+
+<nav class="tabs">
+  {% for c in r.countries %}<a class="{% if c == r.country %}on{% endif %}" href="{{ url_for('ranking', country=c) }}">{{ c }}</a>{% endfor %}
+</nav>
+
+{% if r.unvalidated %}<div class="warn">The model showed <b>no edge on {{ r.country }} stocks</b> in testing. Don't rely on this ranking.</div>{% endif %}
+
+<section class="card">
+  <form class="filter" method="get">
+    <label>Sector
+      <select name="sector" onchange="this.form.submit()">
+        <option value="">All sectors</option>
+        {% for s in r.sectors %}<option {% if s == r.sector %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+    </label>
+    <span class="muted small">{{ r.rows|length }} stock{{ '' if r.rows|length == 1 else 's' }}{% if r.sector %} in {{ r.sector }}{% endif %}</span>
+  </form>
+  <table class="list rank-table">
+    <thead><tr><th>Rank</th><th>Stock</th><th class="hide-sm">Sector</th><th>Position in market</th><th class="hide-sm">Verdict</th></tr></thead>
+    <tbody>
+    {% for s in r.rows %}
+    <tr id="{{ s.ticker }}" class="{% if s.ticker == hl %}hl{% endif %}" onclick="location='{{ url_for('stock', ticker=s.ticker) }}'">
+      <td class="rk">{{ s.rank }}</td>
+      <td><b>{{ s.ticker }}</b> <span class="muted">{{ s.name }}</span></td>
+      <td class="muted hide-sm">{{ s.sector }}</td>
+      <td><div class="meter"><span class="q{{ s.quintile }}" style="width: {{ s.better }}%"></span></div></td>
+      <td class="hide-sm"><span class="pill {{ s.verdict_class }}">{{ s.verdict }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="small muted">Rank 1 is the stock the model expects to do best <b>against the rest of {{ r.country }}</b> over the next 20 trading days. It isn't a guarantee: a single stock is noisy, and in testing the edge came from holding a group of top-ranked stocks (for example 10–20 from the top 20%), not from one pick.</p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  const hl = document.querySelector("tr.hl");
+  if (hl) hl.scrollIntoView({ block: "center" });
+</script>
+{% endblock %}

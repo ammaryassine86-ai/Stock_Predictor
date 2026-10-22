@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Tracked · Stock Agent{% endblock %}
+{% block content %}
+<section class="cols">
+  <div class="card">
+    <h2>Tracked stocks</h2>
+    {% if rows %}
+    <table class="list">
+      {% for r in rows %}
+      <tr onclick="location='{{ url_for('stock', ticker=r.ticker) }}'">
+        <td><b>{{ r.ticker }}</b> <span class="muted">{{ r.name }}</span></td>
+        <td class="muted">{{ r.country }}</td><td>{{ r.rank }}</td>
+        <td><span class="pill {{ r.verdict_class }}">{{ r.verdict }}</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">Nothing tracked yet. Open a stock and click <b>+ Track</b>; you'll be notified after each nightly run when its ranking changes.</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>Notifications</h2>
+    {% for n in notes %}
+      <a class="note {% if not n.read %}unread{% endif %}" href="{{ url_for('stock', ticker=n.ticker) }}">
+        <span class="small muted">{{ n.time }}</span><span><b>{{ n.ticker }}</b> {{ n.message }}</span>
+      </a>
+    {% else %}
+      <p class="muted">No notifications yet. They're created after the nightly run when a tracked stock moves to another fifth of its market, or its rank changes a lot.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

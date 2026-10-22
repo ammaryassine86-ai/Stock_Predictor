@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Search · Stock Agent{% endblock %}
+{% block content %}
+<section class="card">
+  {% if not_found %}
+    <h2>Stock not found</h2>
+    <p class="muted">The agent only covers the ~1,100 stocks it was trained on (S&amp;P 500, FTSE 100, ASX 200, DAX, CAC 40, TSX 60, NIFTY 50, IBEX 35, AEX, Hang Seng). Try searching by name or ticker.</p>
+  {% elif not results and not groups %}
+    <h2>No match for “{{ q }}”</h2>
+    <p class="muted">Try the company name (e.g. “apple”) or the ticker (e.g. AAPL, ASML.AS, 0700.HK). Stocks outside the agent's universe can't be ranked.</p>
+  {% else %}
+    <h2>Results for “{{ q }}”</h2>
+    {% if groups %}
+    <div class="label">Industries &amp; sectors</div>
+    <div class="groups">
+      {% for g in groups %}<a class="group" href="{{ url_for(g.kind, name=g.name) }}"><b>{{ g.name }}</b><span class="muted">{{ g.count }} stocks · see them ranked →</span></a>{% endfor %}
+    </div>
+    {% endif %}
+    {% if results %}<div class="label">Stocks</div>{% endif %}
+    <table class="list">
+      {% for r in results %}
+      <tr onclick="location='{{ url_for('stock', ticker=r.ticker) }}'">
+        <td><b>{{ r.ticker }}</b></td><td>{{ r.name }}</td><td class="muted">{{ r.country }}</td>
+        <td>{% if r.quintile %}<span class="q q{{ r.quintile }}">{{ r.quintile }}/5</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</section>
+{% endblock %}

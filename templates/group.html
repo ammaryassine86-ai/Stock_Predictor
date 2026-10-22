@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ g.name }} · Stock Agent{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>{{ g.name }}</h1>
+  <p class="muted">{{ g.rows|length }} stocks in this {{ g.kind }} · {{ g.ranked }} ranked · ranking of {{ g.ranking_date or '—' }} · model <code>{{ g.tag or '—' }}</code></p>
+</section>
+{% if g.name|lower in ['gold', 'other precious metals & mining', 'oil & gas e&p', 'oil & gas integrated'] %}
+<div class="warn">The agent ranks <b>companies</b>, not the commodity itself. The {{ 'gold' if 'old' in g.name|lower or 'recious' in g.name|lower else 'oil' }} price is one of the model's inputs, which is partly why these stocks often move together.</div>
+{% endif %}
+<section class="card">
+  <table class="list rank-table">
+    <thead><tr><th>Stock</th><th>Market</th><th>Rank in its market</th><th>Position</th><th class="hide-sm">Verdict</th></tr></thead>
+    <tbody>
+    {% for s in g.rows %}
+    <tr onclick="location='{{ url_for('stock', ticker=s.ticker) }}'">
+      <td><b>{{ s.ticker }}</b> <span class="muted">{{ s.name }}</span>{% if g.kind == 'sector' and s.industry %}<div class="small muted">{{ s.industry }}</div>{% endif %}</td>
+      <td class="muted">{{ s.country }}{% if s.unvalidated %} ⚠{% endif %}</td>
+      <td>{{ s.rank }}</td>
+      <td>{% if s.better >= 0 %}<div class="meter"><span class="q{{ s.quintile }}" style="width: {{ s.better }}%"></span></div>{% endif %}</td>
+      <td class="hide-sm"><span class="pill {{ s.verdict_class }}">{{ s.verdict }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="small muted">Each stock is ranked against <b>its own market</b> (a Canadian miner against other Canadian stocks), because that's what the model predicts. Sorted by that position, best first. ⚠ = market where the model showed no edge.</p>
+</section>
+{% endblock %}

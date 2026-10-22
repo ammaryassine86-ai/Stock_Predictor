@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ p.ticker }} · Stock Agent{% endblock %}
+{% block content %}
+<section class="stock-head">
+  <div>
+    <h1>{{ p.ticker }} <span class="muted name">{{ p.name }}</span></h1>
+    <div class="muted">{{ p.country }}{% if p.index %} · {{ p.index }}{% endif %}{% if p.sector %} · {{ p.sector }}{% endif %}{% if p.industry %} · <a class="link" href="{{ url_for('industry', name=p.industry) }}">{{ p.industry }}</a>{% endif %}</div>
+  </div>
+  <div class="head-right">
+    {% if p.price %}
+    <div class="price">
+      <div class="px"><b>{{ p.price.last | money }}</b> <span class="muted">{{ p.price.currency }}</span>
+        <span class="chg {{ 'up-t' if p.price.day_pct >= 0 else 'down-t' }}">{{ '%+.2f' % p.price.day_pct }}%</span></div>
+      <div class="small muted">per share · {{ p.price.date }}{% if p.price.currency_note %} · {{ p.price.currency_note }}{% endif %}</div>
+    </div>
+    {% endif %}
+    <button id="track" class="btn {% if p.tracked %}on{% endif %}" data-ticker="{{ p.ticker }}">
+      {% if p.tracked %}✓ Tracking{% else %}+ Track{% endif %}
+    </button>
+  </div>
+</section>
+{% if p.price %}
+<section class="stats">
+  <div><span class="muted">1 month</span><b class="{{ 'up-t' if p.price.month_pct >= 0 else 'down-t' }}">{{ '%+.1f' % p.price.month_pct }}%</b></div>
+  <div><span class="muted">52-week low</span><b>{{ p.price.low_52w | money }}</b></div>
+  <div><span class="muted">52-week high</span><b>{{ p.price.high_52w | money }}</b></div>
+  <div><span class="muted">Trades on</span><b>{{ p.buy.exchange }}</b></div>
+</section>
+{% endif %}
+
+{% if p.unvalidated %}
+<div class="warn">The model showed <b>no edge on {{ p.country }} stocks</b> in testing. Don't rely on this ranking.</div>
+{% endif %}
+
+<section class="cols">
+  <div class="card summary">
+    {% if p.info %}
+      <div class="label">Next {{ p.horizon }} trading days, compared with the rest of {{ p.country }}</div>
+      <div class="verdict {{ p.verdict_class }}">{{ p.verdict }}</div>
+      <div class="rankline">Rank <b>{{ p.info.rank_in_market }}</b> of {{ p.info.stocks_in_market }} · better than <b>{{ p.better_than }}%</b> of its market</div>
+      <div class="qbar">{% for i in range(1, 6) %}<span class="{% if i == p.info.quintile %}on q{{ i }}{% endif %}"></span>{% endfor %}</div>
+      <div class="qlegend"><span>Bottom 20%</span><span>Top 20%</span></div>
+      <a class="more" href="{{ url_for('ranking', country=p.country, hl=p.ticker) }}">See the full {{ p.country }} ranking →</a>
+      {% if p.projection %}
+      <div class="proj">
+        <div class="label">Estimated price in {{ p.horizon }} trading days</div>
+        <div class="projrow"><span>Middle estimate</span><b>{{ p.projection.end_mid | money }}</b></div>
+        <div class="projrow"><span>Likely range <span class="muted">(2 in 3)</span></span><b>{{ p.projection.end_low68 | money }} – {{ p.projection.end_high68 | money }}</b></div>
+        <div class="projrow muted"><span>Last price ({{ p.price_date }})</span><span>{{ p.last_price | money }}</span></div>
+      </div>
+      {% endif %}
+      {% if p.info.missing_features_pct > 20 %}<p class="small warn-t">{{ p.info.missing_features_pct|round|int }}% of this stock's data is missing, so treat this ranking with extra care.</p>{% endif %}
+    {% else %}
+      <div class="verdict neutral">No ranking yet</div>
+      <p class="muted">This stock isn't in the latest ranking ({{ p.ranking_date or 'none' }}). New stocks appear after the next nightly run with a model trained on them.</p>
+    {% endif %}
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-head"><h3>Price and the next {{ p.horizon }} trading days</h3>
+      <span class="legend"><i class="lg hist"></i>Price <i class="lg mid"></i>Middle estimate <i class="lg b68"></i>Likely range <i class="lg b95"></i>Wide range</span></div>
+    {% if p.history.close %}<canvas id="chart" height="300"></canvas>{% else %}<p class="muted">No price data for this stock yet.</p>{% endif %}
+    <p class="small muted">The shaded area comes from how much this stock usually moves (its volatility). The middle line leans up or down by the
+      average extra return of stocks the model ranked like this one in testing{% if p.projection %} ({{ '%+.1f' % p.projection.tilt_pct }}% over {{ p.horizon }} days){% endif %},
+      assuming the overall market stays flat. It's a range of plausible outcomes, not a forecast of the exact path.</p>
+  </div>
+</section>
+
+<section class="cols">
+  <div class="card">
+    <h3>Why the model ranks it here</h3>
+    {% if p.reasons.available and (p.reasons.up or p.reasons.down) %}
+      <div class="label up-t">Pushing it up</div>
+      {% for r in p.reasons.up %}<div class="reason"><span>{{ r.label }}</span><b>{{ r.value }}</b></div>{% else %}<p class="muted small">Nothing notable.</p>{% endfor %}
+      <div class="label down-t">Pushing it down</div>
+      {% for r in p.reasons.down %}<div class="reason"><span>{{ r.label }}</span><b>{{ r.value }}</b></div>{% else %}<p class="muted small">Nothing notable.</p>{% endfor %}
+    {% else %}
+      <p class="muted">{% if p.info %}Reasons appear after the next nightly run, which now saves them for every stock.{% else %}No reasons: this stock isn't in the latest ranking.{% endif %}</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3>Related stocks{% if p.industry %} · <a class="link" href="{{ url_for('industry', name=p.industry) }}">{{ p.industry }} →</a>{% endif %}</h3>
+    {% if p.related %}
+    <table class="list">
+      {% for r in p.related %}
+      <tr onclick="location='{{ url_for('stock', ticker=r.ticker) }}'">
+        <td><b>{{ r.ticker }}</b> <span class="muted">{{ r.name }}</span></td>
+        <td class="muted">{{ r.country }}</td><td>{{ r.rank }}</td>
+        <td>{% if r.quintile %}<span class="q q{{ r.quintile }}">{{ r.quintile }}/5</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="muted">No other stock from the same industry in the agent.</p>{% endif %}
+  </div>
+</section>
+<section class="card">
+  <h3>Where to buy {{ p.ticker }}</h3>
+  <p>{{ p.name }} trades on the <b>{{ p.buy.exchange }}</b>. At a broker, search for <b>{{ p.buy.symbol }}</b> on that exchange.
+     <a class="link" href="{{ p.buy.yahoo }}" target="_blank" rel="noopener">Full quote on Yahoo Finance ↗</a></p>
+  {% if p.buy.restricted %}<div class="warn">Indian (NSE) shares are generally <b>not open to foreign retail investors</b>. Most international brokers can't buy them for you.</div>{% endif %}
+  <div class="brokers">
+    {% for b in p.buy.brokers %}
+    <a class="broker" href="{{ b.url }}" target="_blank" rel="noopener"><b>{{ b.name }} ↗</b><span class="small muted">{{ b.note }}</span></a>
+    {% endfor %}
+  </div>
+  {% if p.buy.tunisian %}
+  <p class="small muted">A Tunisian stock: you can buy it in dinars through any licensed Tunisian broker, with no foreign-exchange formalities.</p>
+  {% else %}
+  <p class="small muted">This stock isn't listed in Tunisia, so only international brokers can buy it. These buy real shares (not CFDs) and are listed as available to residents of Tunisia by BrokerChooser. This isn't a recommendation and I don't earn anything from them: before opening an account, check fees, which regulator supervises them, and the Central Bank of Tunisia's rules for investing money abroad.</p>
+  {% endif %}
+</section>
+
+<p class="small muted center">Ranking: {{ p.ranking_date or '—' }} · model {{ p.model_tag or '—' }} · prices up to {{ p.price_date or '—' }}</p>
+{% endblock %}
+
+{% block scripts %}
+{% if p.history.close %}
+<script src="{{ url_for('static', filename='chart.umd.js') }}"></script>
+<script>
+  drawStockChart({{ p.history | tojson }}, {{ p.projection | tojson }});
+</script>
+{% endif %}
+{% endblock %}
